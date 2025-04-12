@@ -1,0 +1,61 @@
+// 公共前缀
+// @import '@/uni_modules/lime-ui/style/index.scss';
+@import './icon';
+
+$prefix: l !default;
+$icon: #{$prefix}-icon;
+
+/* #ifndef APP-NVUE || APP-ANDROID || APP-IOS */
+:host {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+/* #endif */
+
+
+.#{$icon} {
+	/* #ifndef APP-NVUE || APP-ANDROID || APP-IOS */
+	font-family: $prefix;
+	// display: inline-block;
+	display: inline-flex;
+	position: relative;
+	width: 1em;
+	height: 1em;
+	/* #endif */
+	
+	/* #ifdef APP-NVUE || APP-ANDROID || APP-IOS */
+	width: 40rpx;
+	// height: 40rpx;
+	/* #endif */
+	
+	&--font {
+		font-family: $prefix;
+		line-height: 1;
+		// height: inherit;
+		text-align: center;
+		// font-size: inherit;
+		
+		/* #ifndef APP-NVUE || APP-ANDROID || APP-IOS */
+		font-style: normal;
+		font-weight: normal;
+		font-variant: normal;
+		text-transform: none;
+		-webkit-font-smoothing: antialiased;
+		-moz-osx-font-smoothing: grayscale;
+		// -webkit-background-clip: text;
+		// background-clip: text;
+		/* #endif */
+	}
+	&--image {
+		/* #ifdef WEB */
+		position: relative;
+		// :deep img {
+		// 	z-index: -1;
+		// }
+		::deep(img) {
+			z-index: -1;
+		}
+		/* #endif */
+	}
+}

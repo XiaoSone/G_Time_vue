@@ -1,0 +1,162 @@
+<template>
+	<text class="l-icon" :class="[classes, lClass]" :style="[styles, lStyle]" v-if="!isImage && !isIconify && !isSVG" @click="$emit('click')">{{iconCode}}</text>
+	<image class="l-icon" :class="[classes, lClass]" :style="[styles, lStyle]" v-else-if="(!isSVG && !isIconify) && isImage" :src="iconUrl" @click="$emit('click')"></image>
+	<!-- <l-svg class="l-icon" :class="[classes, lClass]" :style="[styles, lStyle]" :color="color" :src="iconUrl" v-else :web="web" @error="imageError" @load="imageload" @click="$emit('click')"></l-svg> -->
+</template>
+<script lang="uts" setup>
+	import { addUnit } from '@/uni_modules/lime-shared/addUnit';
+	import { IconCollection } from './types';
+	import { icons } from './icons'
+	defineOptions({
+		name: 'l-icon'
+	})
+	const name = 'l-icon'
+	const IconifyURL : string = 'https://api.iconify.design/';
+	const $iconsHost : string | null = uni.getStorageSync('$limeIconsHost') as string | null
+	/**
+	 * LimeIcon 图标
+	 * @description ICON集
+	 * @tutorial https://ext.dcloud.net.cn/plugin?id=14057
+	 * @property {String} name 图标名称
+	 * @property {String} color 颜色
+	 * @property {String} size 尺寸
+	 * @property {String} prefix 字体图标前缀  
+	 * @property {Boolean} inherit 是否继承颜色 
+	 * @property {Boolean} web 原生 app(nvue,uvue) 是否使用web渲染  
+	 * @event {Function} click 点击事件
+	 */
+	const props = defineProps({
+		name: {
+			type: String,
+			default: ''
+		},
+		color: {
+			type: String,
+			default: ''
+		},
+		// #ifdef APP-ANDROID
+		size: {
+			type: Object,
+			// default: 32
+		},
+		// #endif
+		// #ifndef APP-ANDROID
+		size: {
+			type: [String, Number],
+			// #ifdef APP-IOS
+			// default: 32,
+			// #endif
+		},
+		// #endif
+		
+		prefix: {
+			type: String,
+			default: ''
+		},
+		lClass: {
+			type: String,
+			default: ''
+		},
+		// 对安卓IOS无效
+		inherit: {
+			type: Boolean,
+			default: true
+		},
+		web: {
+			type: Boolean,
+			default: false
+		},
+		lStyle: {
+			type: [String, Object, Array],
+			default: ''
+		},
+	})
+
+	const emits = defineEmits(['click'])
+	const $iconCollection = inject<IconCollection>('$iconCollection', {has: false, icons: new Map<string, any|null>()} as IconCollection)
+	const collectionIcon = computed(():string|null => {
+		return $iconCollection.icons.get(props.name) as string | null
+	})
+	const webviewRef = ref<UniWebViewElement | null>(null)
+	const hasHost = computed<boolean>(() : boolean => props.name.indexOf('/') != -1)
+	const isIconify = computed<boolean>(() : boolean => {
+		return !hasHost.value && props.name.includes(':')
+	})
+	const isImage = computed<boolean>(() : boolean => {
+		return /\.(jpe?g|png|gif|bmp|webp|tiff?)$/i.test(props.name) || /^data:image\/(jpeg|png|gif|bmp|webp|tiff);base64,/.test(props.name)
+	})
+	const isSVG = computed<boolean>(():boolean => {
+		return /\.svg$/i.test(props.name) || props.name.startsWith('data:image/svg+xml') || props.name.startsWith('<svg')
+	})
+	const classes = computed<Map<string, any>>(() : Map<string, any> => {
+		const cls = new Map<string, any>()
+		cls.set(`${name}--font`, !isImage.value && !isIconify.value && !isSVG.value)
+		cls.set(`${name}--image`, isImage.value || isIconify.value || isSVG.value)
+		cls.set(props.prefix, props.prefix.length > 0)
+		cls.set(props.lClass, props.lClass.length > 0)
+		// #ifndef APP-ANDROID || APP-IOS
+		cls.set(`is-inherit`, (isIconify.value) && (props.color.length > 0 || props.inherit))
+		// #endif
+		return cls
+	})
+	const styles = computed<Map<string, any>>(() : Map<string, any> => {
+		const style = new Map<string, any>();
+		// #ifdef APP
+		if (props.color != '' && !isImage.value && !isIconify.value) {
+			style.set('color', props.color)
+		}
+		const size = addUnit(props.size) ?? ((isImage.value || isIconify.value) ? '32px' : null)
+		// #endif
+		// #ifndef APP 
+		style.set('color', props.color)
+		const size = addUnit(props.size)
+		// #endif
+		
+		if (size != null) {
+			style.set('width', size)
+			if (isImage.value || isIconify.value || isSVG.value) {
+				style.set('height', size)
+			} else {
+				style.set('fontSize', size)
+			}
+		}
+		return style
+	})
+	const iconCode = computed<string>(() : string => {
+		return icons.value.get(props.name) as string | null ?? ''
+	})
+	const isError = ref(false)
+	const cacheMap = new Map<string, string>()
+	const iconUrl = computed(():string => {
+		const hasIconsHost = $iconsHost != null && $iconsHost != '' 
+		// const hasIconCollection = $iconCollection.has
+		if(isImage.value) {
+			return hasHost.value ? props.name : ($iconsHost ?? '') + props.name
+		} else if(isIconify.value) {
+			// 防止重绘
+			if(cacheMap.has(props.name) && !isError.value) {
+				return cacheMap.get(props.name)!
+			}
+			// 如果存在collectionIcon则使用 
+			// 如果设置的路径加载失败 就使用网络地址 就使用iconify api
+			const _host = `${hasIconsHost ? $iconsHost : IconifyURL}`
+			const _icon =collectionIcon.value ?? _host + `${props.name}.svg`.replace(/:/g, '/') 
+			cacheMap.set(props.name, _icon)
+			return _icon
+		} else if(isSVG.value) {
+			return (/\.svg$/i.test(props.name) && $iconsHost != null && !hasHost.value ? $iconsHost : '') + props.name.replace(/'/g, '"')
+		} else {
+			return ''
+		}
+	})
+		
+	const imageError = () => {
+		isError.value = true
+	}
+	const imageload = () => {
+		isError.value = false
+	}
+</script>
+<style lang="scss">
+	@import './index.scss';
+</style>
