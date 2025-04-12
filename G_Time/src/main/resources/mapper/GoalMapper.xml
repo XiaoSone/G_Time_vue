@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.g_time.mapper.GoalMapper">
+    <!-- 目标基础操作 -->
+    <insert id="createGoal">
+        INSERT INTO goals (user_id, name, description, start_date, due_date, status, created_at, updated_at)
+        VALUES (#{goal.userId}, #{goal.name}, #{goal.description}, #{goal.startDate}, #{goal.dueDate}, #{goal.status},
+                #{goal.createdAt}, #{goal.updatedAt})
+    </insert>
+
+    <update id="updateGoal">
+        UPDATE goals
+        SET name        = #{goal.name},
+            description = #{goal.description},
+            start_date  = #{goal.startDate},
+            due_date    = #{goal.dueDate},
+            progress    = #{goal.progress},
+            status      = #{goal.status},
+            updated_at  = #{goal.updatedAt}
+        WHERE id = #{goalId}
+          AND user_id = #{userId}
+    </update>
+
+    <delete id="deleteGoal">
+        DELETE
+        FROM goals
+        WHERE id = #{goalId}
+          AND user_id = #{userId}
+    </delete>
+
+    <select id="selectGoalById" resultType="com.example.g_time.entity.Goal">
+        SELECT *
+        FROM goals
+        WHERE id = #{id}
+          AND user_id = #{userId}
+    </select>
+
+    <select id="selectGoalsByUserId" resultType="com.example.g_time.entity.Goal">
+        SELECT *
+        FROM goals
+        WHERE user_id = #{userId}
+        ORDER BY due_date ASC
+    </select>
+
+    <!-- 阶段基础操作 -->
+    <insert id="addStage" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO goals_stages (goal_id, parent_stage_id, name, description, due_date, status, sequence)
+        VALUES (#{stage.goalId}, #{stage.parentStageId}, #{stage.name}, #{stage.description}, #{stage.dueDate},
+                #{stage.status}, #{stage.sequence})
+    </insert>
+
+    <update id="updateStageStatus">
+        UPDATE goals_stages
+        SET status = #{status}
+        WHERE id = #{stageId}
+          AND goal_id = #{goalId}
+    </update>
+
+    <!-- 查询所有阶段（包含父阶段ID） -->
+    <select id="selectStagesByGoalId" resultType="com.example.g_time.entity.Stage">
+        SELECT id,
+               goal_id,
+               parent_stage_id,
+               name,
+               description,
+               due_date,
+               status,
+               sequence
+        FROM goals_stages
+        WHERE goal_id = #{goalId}
+        ORDER BY sequence ASC
+    </select>
+
+    <!-- 查询单个阶段 -->
+    <select id="selectStageById" resultType="com.example.g_time.entity.Stage">
+        SELECT *
+        FROM goals_stages
+        WHERE id = #{stageId}
+    </select>
+
+    <!-- 查询子阶段 -->
+    <select id="selectSubStagesByParentId" resultType="com.example.g_time.entity.Stage">
+        SELECT *
+        FROM goals_stages
+        WHERE
+        <choose>
+            <when test="parentStageId != null">
+                parent_stage_id = #{parentStageId}
+            </when>
+            <otherwise>
+                parent_stage_id IS NULL
+            </otherwise>
+        </choose>
+        ORDER BY sequence ASC
+    </select>
+
+    <!-- 获取最大sequence值 -->
+    <select id="getMaxSequenceByGoalId" resultType="java.lang.Integer">
+        SELECT MAX(sequence)
+        FROM goals_stages
+        WHERE goal_id = #{goalId} FOR
+        UPDATE
+    </select>
+
+    <!-- 批量删除阶段 -->
+    <delete id="deleteStages">
+        DELETE FROM goals_stages
+        WHERE goal_id = #{goalId}
+        AND id IN
+        <foreach collection="stageIds" item="stageId" open="(" separator="," close=")">
+            #{stageId}
+        </foreach>
+    </delete>
+
+    <!-- 批量查询阶段 -->
+    <select id="selectStagesByIds" resultType="com.example.g_time.entity.Stage">
+        SELECT * FROM goals_stages
+        WHERE goal_id = #{goalId}
+        AND id IN
+        <foreach collection="stageIds" item="stageId" open="(" separator="," close=")">
+            #{stageId}
+        </foreach>
+    </select>
+
+    <!-- 更新阶段顺序 -->
+<!--    <update id="updateStageSequence">-->
+<!--        UPDATE goals_stages-->
+<!--        SET sequence = #{sequence}-->
+<!--        WHERE id = #{stageId}-->
+<!--          AND goal_id = (-->
+<!--            SELECT goal_id-->
+<!--            FROM goals_stages-->
+<!--            WHERE id = #{stageId}-->
+<!--        )-->
+<!--    </update>-->
+
+    <!-- 更新阶段 -->
+    <update id="updateStage">
+        UPDATE goals_stages
+        SET name = #{stage.name},
+            description = #{stage.description},
+            due_date = #{stage.dueDate},
+            parent_stage_id = #{stage.parentStageId},
+            status = #{stage.status},
+            sequence = #{stage.sequence}
+        WHERE id = #{stage.id}
+    </update>
+
+
+    <!-- 查询目标的根阶段 -->
+    <select id="selectRootStagesByGoalId" resultType="com.example.g_time.entity.Stage">
+        SELECT *
+        FROM goals_stages
+        WHERE goal_id = #{goalId}
+          AND parent_stage_id IS NULL
+        ORDER BY sequence ASC
+    </select>
+
+    <select id="selectStagesByGoalAndParent" resultType="com.example.g_time.entity.Stage">
+        SELECT *
+        FROM goals_stages
+        WHERE goal_id = #{goalId}
+          AND (
+                (#{parentStageId} IS NULL AND parent_stage_id IS NULL) OR
+                (#{parentStageId} IS NOT NULL AND parent_stage_id = #{parentStageId})
+            )
+        ORDER BY sequence
+    </select>
+
+    <update id="batchUpdateStageSequences">
+        UPDATE goals_stages
+        SET sequence = CASE
+        <foreach collection="sequenceUpdates.entrySet()" item="value" index="key">
+            WHEN id = #{key} THEN #{value}
+        </foreach>
+        END
+        WHERE id IN
+        <foreach collection="sequenceUpdates.keySet()" item="key" open="(" separator="," close=")">
+            #{key}
+        </foreach>
+    </update>
+
+    <update id="batchUpdateStageStatus">
+        UPDATE goals_stages
+        SET status = CASE
+        <foreach collection="statusUpdates.entrySet()" item="value" index="key">
+            WHEN id = #{key} THEN #{value}
+        </foreach>
+        END
+        WHERE id IN
+        <foreach collection="statusUpdates.keySet()" item="key" open="(" separator="," close=")">
+            #{key}
+        </foreach>
+    </update>
+
+    <update id="updateGoalStatus">
+        UPDATE goals
+        SET status = #{status}
+        WHERE id = #{goalId}
+    </update>
+
+
+</mapper>

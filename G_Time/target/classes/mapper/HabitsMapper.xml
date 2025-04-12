@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.g_time.mapper.HabitsMapper">
+
+    <insert id="createHabit">
+        INSERT INTO habits (user_id, name, description, frequency, category, start_date, end_date, streak, max_streak, status, created_at)
+        VALUES (#{userId}, #{habitsDTO.name}, #{habitsDTO.description}, #{habitsDTO.frequency}, #{habitsDTO.category}, #{habitsDTO.startDate}, #{habitsDTO.endDate},
+                #{habitsDTO.streak}, #{habitsDTO.maxStreak}, #{habitsDTO.status}, #{habitsDTO.createdAt})
+    </insert>
+    <select id="selectHabitById" resultType="com.example.g_time.entity.Habit">
+        SELECT * FROM habits WHERE id = #{habitId} AND user_id = #{userId}
+    </select>
+    <select id="selectHabitsByUserId" resultType="com.example.g_time.entity.Habit">
+        SELECT * FROM habits WHERE user_id = #{userId}
+    </select>
+    <update id="updateHabit">
+        UPDATE habits SET name = #{habitsDTO.name}, description = #{habitsDTO.description}, frequency = #{habitsDTO.frequency}, category = #{habitsDTO.category},
+                start_date = #{habitsDTO.startDate}, end_date = #{habitsDTO.endDate}, streak = #{habitsDTO.streak},
+                status = #{habitsDTO.status}, created_at = #{habitsDTO.createdAt} WHERE id = #{habitId} AND user_id = #{userId}
+    </update>
+    <delete id="deleteHabit">
+        DELETE FROM habits WHERE id = #{habitId} AND user_id = #{userId}
+    </delete>
+    <update id="checkHabit">
+        UPDATE habits SET streak = #{newStreak}, max_streak = #{newMaxStreak} WHERE id = #{habitId} AND user_id = #{userId}
+    </update>
+    <select id="getHabitLogByDate" resultType="com.example.g_time.entity.HabitLog">
+        SELECT * FROM habit_logs WHERE habit_id = #{habitId} AND logged_at = #{loggedAt}
+    </select>
+
+    <insert id="createHabitLog">
+        INSERT INTO habit_logs (habit_id, logged_at, is_completed)
+        VALUES (#{habitId}, #{loggedAt}, #{isCompleted})
+        ON DUPLICATE KEY UPDATE is_completed = #{isCompleted}
+    </insert>
+
+    <update id="updateStreak">
+        UPDATE habits SET streak = #{newStreak}, max_streak = #{newMaxStreak} WHERE id = #{habitId}
+    </update>
+    <update id="upHabitLog">
+        UPDATE habit_logs SET is_completed = #{isCompleted} WHERE habit_id = #{habitId} AND logged_at = #{date} AND is_completed = !#{isCompleted}
+    </update>
+
+    <!-- 根据日期查询打卡记录 -->
+    <select id="selectHabitLog" resultType="com.example.g_time.entity.HabitLog">
+        SELECT habit_id, logged_at, is_completed
+        FROM habit_logs
+        WHERE logged_at = #{date}
+    </select>
+    <select id="selectHabitLogbyHabitId" resultType="com.example.g_time.entity.HabitLog">
+        SELECT habit_id, logged_at, is_completed
+        FROM habit_logs
+        WHERE logged_at = #{date} AND habit_id = #{habitId}
+    </select>
+    <select id="selectHabitLogs" resultType="com.example.g_time.entity.HabitLog">
+        SELECT habit_id, logged_at, is_completed
+        FROM habit_logs
+        WHERE logged_at BETWEEN #{startDate} AND #{endDate}
+    </select>
+
+</mapper>

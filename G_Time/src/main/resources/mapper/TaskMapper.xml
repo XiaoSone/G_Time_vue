@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.g_time.mapper.TaskMapper">
+    <insert id="creatTask" parameterType="com.example.g_time.dto.TaskDTO">
+        insert into tasks (user_id, title, description, category, start_time, end_time , priority, status)
+        values (#{userId}, #{taskDTO.title}, #{taskDTO.description}, #{taskDTO.category}, #{taskDTO.startTime},
+                #{taskDTO.endTime}, #{taskDTO.priority}, #{taskDTO.status})
+    </insert>
+    <select id="getTasksByUserId" resultType="com.example.g_time.entity.Task">
+        select * from tasks where user_id = #{userId}
+    </select>
+    <select id="getTaskByUserIdAndTaskId" resultType="com.example.g_time.entity.Task">
+        select * from tasks where user_id = #{userId} and id = #{taskId}
+    </select>
+    <update id="updateTask">
+        update tasks set title = #{taskDTO.title}, description = #{taskDTO.description}, category = #{taskDTO.category},
+        start_time = #{taskDTO.startTime}, end_time = #{taskDTO.endTime}, priority = #{taskDTO.priority}, status = #{taskDTO.status}
+        where user_id = #{userId} and id = #{taskId}
+    </update>
+    <delete id="deleteTask">
+        DELETE FROM tasks WHERE id = #{taskId} AND user_id = #{userId}
+    </delete>
+</mapper>
